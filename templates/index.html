@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống bán hàng trực tuyến đồ thể thao</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background-color: white;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .total {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            padding: 10px;
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hệ thống bán hàng trực tuyến</h1>
+        
+        <div class="card">
+            <h2>Thêm đơn hàng mới</h2>
+            <form id="orderForm">
+                <div class="form-group">
+                    <label for="ma_hang">Mã hàng:</label>
+                    <input type="text" id="ma_hang" name="ma_hang" required>
+                </div>
+                <div class="form-group">
+                    <label for="ten_hang">Tên hàng:</label>
+                    <input type="text" id="ten_hang" name="ten_hang" required>
+                </div>
+                <div class="form-group">
+                    <label for="so_luong">Số lượng:</label>
+                    <input type="number" id="so_luong" name="so_luong" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="don_gia">Đơn giá:</label>
+                    <input type="number" id="don_gia" name="don_gia" min="0" step="1000" required>
+                </div>
+                <div class="form-group">
+                    <label for="thanh_tien">Thành tiền:</label>
+                    <input type="text" id="thanh_tien" name="thanh_tien" readonly>
+                </div>
+                <button type="button" onclick="calculateTotal()">Tính thành tiền</button>
+                <button type="button" onclick="addOrder()">Thêm đơn hàng</button>
+            </form>
+        </div>
+        
+        <div class="card">
+            <h2>Danh mục đơn hàng</h2>
+            <table id="ordersTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Mã hàng</th>
+                        <th>Tên hàng</th>
+                        <th>Số lượng</th>
+                        <th>Đơn giá</th>
+                        <th>Thành tiền</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dữ liệu sẽ được thêm vào đây bằng JavaScript -->
+                </tbody>
+            </table>
+            <div class="total" id="totalAmount">Tổng thành tiền: 0 VNĐ</div>
+        </div>
+    </div>
+
+    <script>
+        // Hàm tải danh sách đơn hàng
+        function loadOrders() {
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector('#ordersTable tbody');
+                    tableBody.innerHTML = '';
+                    
+                    data.forEach(order => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${order.id}</td>
+                            <td>${order.ma_hang}</td>
+                            <td>${order.ten_hang}</td>
+                            <td>${order.so_luong}</td>
+                            <td>${formatCurrency(order.don_gia)}</td>
+                            <td>${formatCurrency(order.thanh_tien)}</td>
+                            <td>
+                                <button onclick="deleteOrder(${order.id})">Xóa</button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                    
+                    // Tính tổng thành tiền
+                    calculateTotalSum();
+                })
+                .catch(error => console.error('Lỗi khi tải danh sách đơn hàng:', error));
+        }
+        
+        // Hàm tính thành tiền cho đơn hàng mới
+        function calculateTotal() {
+            const soLuong = document.getElementById('so_luong').value;
+            const donGia = document.getElementById('don_gia').value;
+            
+            if (soLuong && donGia) {
+                fetch('/api/calculate-total', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        so_luong: parseInt(soLuong),
+                        don_gia: parseFloat(donGia)
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('thanh_tien').value = formatCurrency(data.thanh_tien);
+                })
+                .catch(error => console.error('Lỗi khi tính thành tiền:', error));
+            }
+        }
+        
+        // Hàm thêm đơn hàng mới
+        function addOrder() {
+            const maHang = document.getElementById('ma_hang').value;
+            const tenHang = document.getElementById('ten_hang').value;
+            const soLuong = document.getElementById('so_luong').value;
+            const donGia = document.getElementById('don_gia').value;
+            
+            if (maHang && tenHang && soLuong && donGia) {
+                fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ma_hang: maHang,
+                        ten_hang: tenHang,
+                        so_luong: parseInt(soLuong),
+                        don_gia: parseFloat(donGia)
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Reset form
+                    document.getElementById('orderForm').reset();
+                    // Tải lại danh sách đơn hàng
+                    loadOrders();
+                })
+                .catch(error => console.error('Lỗi khi thêm đơn hàng:', error));
+            } else {
+                alert('Vui lòng điền đầy đủ thông tin đơn hàng!');
+            }
+        }
+        
+        // Hàm xóa đơn hàng
+        function deleteOrder(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa đơn hàng này?')) {
+                fetch(`/api/orders/${id}`, {
+                    method: 'DELETE',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Tải lại danh sách đơn hàng
+                    loadOrders();
+                })
+                .catch(error => console.error('Lỗi khi xóa đơn hàng:', error));
+            }
+        }
+        
+        // Hàm tính tổng thành tiền tất cả đơn hàng
+        function calculateTotalSum() {
+            fetch('/api/calculate-total-sum')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalAmount').textContent = `Tổng thành tiền: ${formatCurrency(data.tong_tien)}`;
+                })
+                .catch(error => console.error('Lỗi khi tính tổng thành tiền:', error));
+        }
+        
+        // Hàm định dạng tiền tệ
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+        }
+        
+        // Tải danh sách đơn hàng khi trang được tải
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOrders();
+        });
+    </script>
+</body>
+</html>
