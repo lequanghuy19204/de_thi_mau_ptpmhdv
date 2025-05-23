@@ -4,10 +4,10 @@ import os
 
 app = Flask(__name__)
 
-# Đường dẫn đến file database
+# Câu 1
+# Tạo cơ sở dữ liệu SQL
 DB_PATH = 'order.db'
 
-# Kiểm tra xem database đã tồn tại chưa
 conn = sqlite3.connect(DB_PATH)
 cursor = conn.cursor()
 cursor.execute('''
@@ -23,13 +23,13 @@ CREATE TABLE IF NOT EXISTS orders (
 conn.commit()
 conn.close()
 
-# Hàm kết nối database
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
-# API endpoint để lấy tất cả đơn hàng
+# Câu 2
+# API để lấy tất cả đơn hàng
 @app.route('/api/orders', methods=['GET'])
 def get_orders():
     conn = get_db_connection()
@@ -49,7 +49,7 @@ def get_orders():
     
     return jsonify(result)
 
-# API endpoint để lấy một đơn hàng theo ID
+# API để lấy một đơn hàng theo ID
 @app.route('/api/orders/<int:id>', methods=['GET'])
 def get_order(id):
     conn = get_db_connection()
@@ -68,7 +68,7 @@ def get_order(id):
         'thanh_tien': order['thanh_tien']
     })
 
-# API endpoint để thêm đơn hàng mới
+# API để thêm đơn hàng mới
 @app.route('/api/orders', methods=['POST'])
 def add_order():
     if not request.json:
@@ -106,7 +106,7 @@ def add_order():
         'thanh_tien': thanh_tien
     }), 201
 
-# API endpoint để cập nhật đơn hàng
+# API để cập nhật đơn hàng
 @app.route('/api/orders/<int:id>', methods=['PUT'])
 def update_order(id):
     if not request.json:
@@ -125,7 +125,7 @@ def update_order(id):
     so_luong = data.get('so_luong', order['so_luong'])
     don_gia = data.get('don_gia', order['don_gia'])
     
-    # Sử dụng dịch vụ tính thành tiền
+    # Sử dụng dịch vụ tính thành tiền của câu 3
     thanh_tien = calculate_total_amount(so_luong, don_gia)
     
     conn.execute(
@@ -144,7 +144,7 @@ def update_order(id):
         'thanh_tien': thanh_tien
     })
 
-# API endpoint để xóa đơn hàng
+# API để xóa đơn hàng
 @app.route('/api/orders/<int:id>', methods=['DELETE'])
 def delete_order(id):
     conn = get_db_connection()
@@ -160,7 +160,8 @@ def delete_order(id):
     
     return jsonify({'message': f'Đơn hàng với ID {id} đã được xóa'})
 
-# API endpoint để tính thành tiền
+# Câu 2
+# API để tính thành tiền
 @app.route('/api/calculate-total', methods=['POST'])
 def calculate_total():
     if not request.json:
@@ -184,7 +185,8 @@ def calculate_total():
         'thanh_tien': thanh_tien
     })
 
-# API endpoint để tính tổng thành tiền các đơn hàng
+# Câu 4
+# API để tính tổng thành tiền các đơn hàng
 @app.route('/api/calculate-total-sum', methods=['GET'])
 def calculate_total_sum():
     conn = get_db_connection()
@@ -197,10 +199,12 @@ def calculate_total_sum():
         'tong_tien': tong_tien
     })
 
-# Hàm tính thành tiền (dịch vụ)
+# Câu 3
+# Hàm tính thành tiền
 def calculate_total_amount(so_luong, don_gia):
     return so_luong * don_gia
 
+# Câu 5
 # Thêm route cho trang chủ
 @app.route('/', methods=['GET'])
 def index():

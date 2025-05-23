@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ thống bán hàng trực tuyến đồ thể thao</title>
+    <title>Hệ thống bán hàng trực tuyến</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -123,7 +123,6 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Dữ liệu sẽ được thêm vào đây bằng JavaScript -->
                 </tbody>
             </table>
             <div class="total" id="totalAmount">Tổng thành tiền: 0 VNĐ</div>
@@ -149,6 +148,7 @@
                             <td>${formatCurrency(order.don_gia)}</td>
                             <td>${formatCurrency(order.thanh_tien)}</td>
                             <td>
+                                <button onclick="editOrder(${order.id})">Sửa</button>
                                 <button onclick="deleteOrder(${order.id})">Xóa</button>
                             </td>
                         `;
@@ -207,9 +207,7 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // Reset form
                     document.getElementById('orderForm').reset();
-                    // Tải lại danh sách đơn hàng
                     loadOrders();
                 })
                 .catch(error => console.error('Lỗi khi thêm đơn hàng:', error));
@@ -226,7 +224,6 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // Tải lại danh sách đơn hàng
                     loadOrders();
                 })
                 .catch(error => console.error('Lỗi khi xóa đơn hàng:', error));
@@ -243,9 +240,75 @@
                 .catch(error => console.error('Lỗi khi tính tổng thành tiền:', error));
         }
         
-        // Hàm định dạng tiền tệ
+        // Hàm thêm đơn vị tiền
         function formatCurrency(amount) {
             return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+        }
+        
+        // Hàm chỉnh sửa đơn hàng
+        function editOrder(id) {
+            fetch(`/api/orders/${id}`)
+                .then(response => response.json())
+                .then(order => {
+                    document.getElementById('ma_hang').value = order.ma_hang;
+                    document.getElementById('ten_hang').value = order.ten_hang;
+                    document.getElementById('so_luong').value = order.so_luong;
+                    document.getElementById('don_gia').value = order.don_gia;
+                    document.getElementById('thanh_tien').value = formatCurrency(order.thanh_tien);
+                    
+                    const hiddenIdField = document.createElement('input');
+                    hiddenIdField.type = 'hidden';
+                    hiddenIdField.id = 'edit_order_id';
+                    hiddenIdField.value = order.id;
+                    document.getElementById('orderForm').appendChild(hiddenIdField);
+                    
+                    const addButton = document.querySelector('button[onclick="addOrder()"]');
+                    addButton.textContent = 'Cập nhật đơn hàng';
+                    addButton.id = 'updateOrderButton';
+                    addButton.setAttribute('onclick', 'updateOrder()');
+                })
+                .catch(error => console.error('Lỗi khi lấy thông tin đơn hàng:', error));
+        }
+        
+        // Hàm cập nhật đơn hàng
+        function updateOrder() {
+            const orderId = document.getElementById('edit_order_id').value;
+            const maHang = document.getElementById('ma_hang').value;
+            const tenHang = document.getElementById('ten_hang').value;
+            const soLuong = document.getElementById('so_luong').value;
+            const donGia = document.getElementById('don_gia').value;
+            
+            if (maHang && tenHang && soLuong && donGia) {
+                fetch(`/api/orders/${orderId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ma_hang: maHang,
+                        ten_hang: tenHang,
+                        so_luong: parseInt(soLuong),
+                        don_gia: parseFloat(donGia)
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('orderForm').reset();
+                    document.getElementById('edit_order_id').remove();
+                    
+                    const updateButton = document.getElementById('updateOrderButton');
+                    if (updateButton) {
+                        updateButton.textContent = 'Thêm đơn hàng';
+                        updateButton.setAttribute('onclick', 'addOrder()');
+                        updateButton.id = ''; 
+                    }
+                    
+                    loadOrders();
+                })
+                .catch(error => console.error('Lỗi khi cập nhật đơn hàng:', error));
+            } else {
+                alert('Vui lòng điền đầy đủ thông tin đơn hàng!');
+            }
         }
         
         // Tải danh sách đơn hàng khi trang được tải
